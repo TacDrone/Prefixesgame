@@ -3,649 +3,761 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prefix Master: Motion Control</title>
+    <title>เกมแทรกกิ้งนิ้วมือ: ตะลุยโจทย์แปลง 12 หน่วย</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- MediaPipe Hands & Camera -->
+    
+    <!-- MediaPipe for Hand Tracking -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <!-- Canvas Confetti for Effects -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;800&display=swap');
-        
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;800&display=swap');
+
         body {
-            font-family: 'Prompt', sans-serif;
-            background-color: #0f172a;
-            color: white;
-            overflow: hidden;
             margin: 0;
-            padding: 0;
-        }
-
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
-
-        .choice-btn {
-            transition: all 0.2s ease-in-out;
-            position: relative;
             overflow: hidden;
+            background-color: #0f172a;
+            font-family: 'Kanit', sans-serif;
+            user-select: none;
         }
 
-        .choice-btn.hovered {
-            transform: scale(1.05);
-            background: rgba(255, 255, 255, 0.2);
-            border-color: #38bdf8;
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
-        }
-
-        .progress-bar {
+        #webcam-video {
             position: absolute;
-            bottom: 0;
+            top: 0;
             left: 0;
-            height: 10px;
-            background-color: #38bdf8;
-            width: 0%;
-            transition: width 0.1s linear;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            transform: scaleX(-1);
+            z-index: 1;
+            opacity: 0.35;
         }
 
-        .neon-text {
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(56, 189, 248, 0.6);
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 20;
+            pointer-events: none;
         }
 
-        .neon-text-red {
-            text-shadow: 0 0 10px rgba(248, 113, 113, 0.8), 0 0 20px rgba(248, 113, 113, 0.6);
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding-bottom: 20px;
         }
 
-        .neon-text-green {
-            text-shadow: 0 0 10px rgba(74, 222, 128, 0.8), 0 0 20px rgba(74, 222, 128, 0.6);
+        /* --- UI Top Section --- */
+        .top-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            gap: 15px;
         }
 
-        /* Animations */
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        /* --- Balloon Styles --- */
+        .balloon-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 10%;
+            padding: 0 5%;
+            margin-bottom: 5vh;
         }
-        .shake-effect { animation: shake 0.5s; }
 
-        @keyframes flashRed {
-            0% { box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0); }
-            50% { box-shadow: inset 0 0 100px 20px rgba(239, 68, 68, 0.8); }
-            100% { box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0); }
+        .balloon-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: float 4s ease-in-out infinite;
         }
-        .flash-red-effect { animation: flashRed 0.6s ease-out; }
 
-        @keyframes flashGreen {
-            0% { box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0); }
-            50% { box-shadow: inset 0 0 100px 20px rgba(34, 197, 94, 0.8); }
-            100% { box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0); }
+        #balloon-0 { animation-delay: 0s; }
+        #balloon-1 { animation-delay: -1.5s; }
+        #balloon-2 { animation-delay: -3s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
         }
-        .flash-green-effect { animation: flashGreen 0.6s ease-out; }
 
+        .balloon {
+            width: clamp(130px, 16vw, 190px);
+            height: clamp(160px, 19vw, 230px);
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 20%),
+                        radial-gradient(circle at 50% 50%, var(--bg-color) 0%, var(--border-color) 100%);
+            border: 4px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.3), 0 15px 25px rgba(0,0,0,0.4);
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .string {
+            width: 2px;
+            height: clamp(40px, 8vh, 80px);
+            background-color: rgba(255, 255, 255, 0.5);
+            margin-top: 8px;
+        }
+
+        #balloon-0 .balloon { --bg-color: #f43f5e; --border-color: #be123c; } 
+        #balloon-1 .balloon { --bg-color: #3b82f6; --border-color: #1d4ed8; } 
+        #balloon-2 .balloon { --bg-color: #10b981; --border-color: #047857; } 
+
+        .balloon-text {
+            font-size: clamp(1.4rem, 2.2vw, 2rem);
+            font-weight: 800;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-align: center;
+            z-index: 2;
+            word-break: break-word;
+            line-height: 1.2;
+            padding: 10px;
+        }
+
+        .balloon-wrapper.hovered .balloon {
+            transform: scale(1.1);
+            filter: brightness(1.2);
+        }
+
+        /* --- Screens --- */
+        .screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+        }
+
+        #flash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 15;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .flash-green { background-color: rgba(16, 185, 129, 0.4); }
+        .flash-red { background-color: rgba(244, 63, 94, 0.4); }
+
+        .floating-text {
+            position: absolute;
+            font-size: 2.5rem;
+            font-weight: bold;
+            z-index: 30;
+            animation: floatUp 1.5s forwards;
+            pointer-events: none;
+        }
         @keyframes floatUp {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
-        }
-        .float-up-effect {
-            position: absolute;
-            color: #4ade80;
-            font-weight: bold;
-            font-size: 3rem;
-            pointer-events: none;
-            animation: floatUp 1s ease-out forwards;
-            z-index: 50;
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-60px); }
         }
 
-        @keyframes floatDown {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(100px) scale(1.5); }
-        }
-        .float-down-effect {
-            position: absolute;
-            color: #ef4444;
-            font-weight: bold;
-            font-size: 3rem;
-            pointer-events: none;
-            animation: floatDown 1s ease-out forwards;
-            z-index: 50;
-        }
-
-        /* Loader */
-        .loader {
-            border: 8px solid rgba(255,255,255,0.1);
-            border-left-color: #38bdf8;
-            border-radius: 50%;
+        .loader-ring {
+            display: inline-block;
             width: 50px;
             height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
             animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="w-screen h-screen flex justify-center items-center">
+<body>
 
-    <!-- Video Feed (Hidden, used for processing) -->
-    <video id="input_video" class="hidden" autoplay playsinline></video>
+    <video id="webcam-video" autoplay playsinline></video>
+    <!-- Canvas สำหรับวาดข้อต่อมือและการประมวลผล -->
+    <canvas id="game-canvas"></canvas>
+    <div id="flash-overlay"></div>
 
-    <!-- Main Game Container -->
-    <div id="game_container" class="relative w-full h-full max-w-6xl max-h-[900px] overflow-hidden sm:rounded-2xl shadow-2xl bg-black">
+    <!-- UI Layer -->
+    <div class="ui-layer" id="game-ui" style="display: none;">
         
-        <!-- Canvas for Camera Output & Hand Landmarks -->
-        <canvas id="output_canvas" class="absolute top-0 left-0 w-full h-full object-cover" style="transform: scaleX(-1);"></canvas>
-        <div id="overlay_darken" class="absolute top-0 left-0 w-full h-full bg-black/40 pointer-events-none"></div>
-
-        <!-- UI Layer -->
-        <div id="ui_layer" class="absolute top-0 left-0 w-full h-full z-10 pointer-events-none flex flex-col">
-            
-            <!-- ====== SCREEN 1: START ====== -->
-            <div id="screen_start" class="w-full h-full flex flex-col items-center justify-center bg-slate-900/90 pointer-events-auto backdrop-blur-sm transition-opacity duration-500">
-                <div class="glass-panel p-10 rounded-3xl text-center max-w-2xl transform scale-100 hover:scale-105 transition-transform duration-300">
-                    <h1 class="text-6xl font-extrabold mb-4 neon-text text-sky-400">Prefix Master</h1>
-                    <h2 class="text-2xl font-semibold mb-6 text-sky-200">Motion Control Quiz</h2>
-                    <p class="text-lg text-slate-300 mb-8 leading-relaxed">
-                        ทดสอบความจำสัญลักษณ์ Prefixes ทางวิทยาศาสตร์<br>
-                        <span class="text-amber-400 font-bold">ใช้ "กล้องเว็บแคม"</span> เพื่อเล่น ยกมือขึ้นและใช้นิ้วชี้<br> เลื่อนไปทับคำตอบที่ถูกต้องค้างไว้ 1.5 วินาที<br>
-                        <br>
-                        ✅ <span class="text-green-400">ตอบถูก: +2 คะแนน</span><br>
-                        ❌ <span class="text-red-400">ตอบผิด: ลบเวลา 5 วินาที</span><br>
-                        ⏱️ <span class="text-sky-400">เวลาเริ่มต้น: 30 วินาที</span>
-                    </p>
-                    
-                    <div id="loading_ai" class="flex flex-col items-center mb-6">
-                        <div class="loader mb-4"></div>
-                        <p class="text-sky-300 animate-pulse">กำลังโหลด AI กล้องและระบบ...</p>
+        <div class="top-section">
+            <div class="flex justify-between items-start w-full px-6 max-w-6xl">
+                <!-- กล่องเวลา -->
+                <div class="bg-slate-800/80 rounded-2xl px-6 py-2 border border-slate-600 shadow-xl relative backdrop-blur-sm">
+                    <span class="text-sm md:text-base text-slate-300 block text-center uppercase tracking-wider font-semibold">เวลาเหลือ</span>
+                    <div class="flex items-baseline justify-center">
+                        <span id="timer-display" class="text-5xl md:text-6xl font-black text-white">60</span>
+                        <span class="text-lg md:text-xl ml-1 text-slate-400">วิ</span>
                     </div>
-
-                    <button id="btn_start" class="hidden group relative px-8 py-4 bg-sky-500 hover:bg-sky-400 text-white font-bold text-2xl rounded-full overflow-hidden shadow-[0_0_20px_rgba(56,189,248,0.5)] transition-all">
-                        <span class="relative z-10">เริ่มเกมส์เลย!</span>
-                        <div class="absolute inset-0 h-full w-0 bg-white/20 transition-all duration-300 ease-out group-hover:w-full z-0"></div>
-                    </button>
+                    <!-- ตัวเลขสถานะเวลาบวก/ลบ -->
+                    <div id="time-feedback-container" class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1"></div>
                 </div>
-            </div>
-
-            <!-- ====== SCREEN 2: GAMEPLAY ====== -->
-            <div id="screen_game" class="hidden w-full h-full relative">
-                <!-- Top Info Bar -->
-                <div class="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
-                    <div class="glass-panel px-6 py-3 rounded-2xl flex items-center gap-3">
-                        <span class="text-xl text-slate-300">คะแนน</span>
-                        <span id="score_display" class="text-4xl font-bold text-yellow-400 neon-text">0</span>
-                    </div>
-                    <div class="glass-panel px-6 py-3 rounded-2xl flex items-center gap-3">
-                        <span class="text-xl text-slate-300">เวลา</span>
-                        <span id="time_display" class="text-4xl font-bold text-sky-400 neon-text w-16 text-right">30</span>
-                    </div>
-                </div>
-
-                <!-- Central Question -->
-                <div class="absolute top-[30%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full px-10 text-center z-10">
-                    <div id="question_box" class="glass-panel inline-block px-10 py-8 rounded-3xl transition-transform duration-300">
-                        <p id="question_text" class="text-5xl md:text-6xl font-bold text-white drop-shadow-lg">คำถาม?</p>
-                        <p class="text-xl text-sky-300 mt-4 animate-pulse">เอานิ้วชี้ไปวางที่คำตอบค้างไว้!</p>
-                    </div>
-                </div>
-
-                <!-- 4 Choices (Row aligned at bottom) -->
-                <div class="absolute bottom-12 left-0 w-full flex justify-center items-center gap-4 px-8 pointer-events-none z-10">
-                    <div id="choice_0" class="choice-btn glass-panel flex-1 max-w-[250px] h-32 md:h-40 rounded-2xl flex items-center justify-center pointer-events-none">
-                        <span class="choice-text text-3xl md:text-5xl font-bold text-white drop-shadow-md z-10">A</span>
-                        <div class="progress-bar"></div>
-                    </div>
-                    <div id="choice_1" class="choice-btn glass-panel flex-1 max-w-[250px] h-32 md:h-40 rounded-2xl flex items-center justify-center pointer-events-none">
-                        <span class="choice-text text-3xl md:text-5xl font-bold text-white drop-shadow-md z-10">B</span>
-                        <div class="progress-bar"></div>
-                    </div>
-                    <div id="choice_2" class="choice-btn glass-panel flex-1 max-w-[250px] h-32 md:h-40 rounded-2xl flex items-center justify-center pointer-events-none">
-                        <span class="choice-text text-3xl md:text-5xl font-bold text-white drop-shadow-md z-10">C</span>
-                        <div class="progress-bar"></div>
-                    </div>
-                    <div id="choice_3" class="choice-btn glass-panel flex-1 max-w-[250px] h-32 md:h-40 rounded-2xl flex items-center justify-center pointer-events-none">
-                        <span class="choice-text text-3xl md:text-5xl font-bold text-white drop-shadow-md z-10">D</span>
-                        <div class="progress-bar"></div>
-                    </div>
-                </div>
-
-                <!-- Cursor indicator -->
-                <div id="hand_cursor" class="absolute w-8 h-8 bg-sky-400 rounded-full blur-[2px] opacity-80 mix-blend-screen pointer-events-none transform -translate-x-1/2 -translate-y-1/2 hidden z-50 shadow-[0_0_20px_#38bdf8]"></div>
                 
-                <!-- Floating Effects Container -->
-                <div id="effects_container" class="absolute top-0 left-0 w-full h-full pointer-events-none z-40 overflow-hidden"></div>
-            </div>
-
-            <!-- ====== SCREEN 3: END ====== -->
-            <div id="screen_end" class="hidden w-full h-full flex flex-col items-center justify-center bg-slate-900/95 pointer-events-auto backdrop-blur-md">
-                <div class="glass-panel p-12 rounded-3xl text-center max-w-lg transform scale-100">
-                    <h1 class="text-6xl font-extrabold mb-4 neon-text-red">หมดเวลา!</h1>
-                    <p class="text-2xl text-slate-300 mb-6">คุณทำคะแนนได้</p>
-                    <div class="text-8xl font-black text-yellow-400 neon-text mb-10" id="final_score">0</div>
-                    
-                    <button id="btn_restart" class="group relative px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-2xl rounded-full overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all">
-                        <span class="relative z-10">เล่นอีกครั้ง</span>
-                        <div class="absolute inset-0 h-full w-0 bg-white/20 transition-all duration-300 ease-out group-hover:w-full z-0"></div>
-                    </button>
+                <!-- กล่องคะแนน -->
+                <div class="bg-slate-800/80 rounded-2xl px-6 py-2 border border-yellow-500/50 shadow-xl relative backdrop-blur-sm">
+                    <span class="text-sm md:text-base text-yellow-300 block text-center uppercase tracking-wider font-semibold">คะแนน</span>
+                    <span id="score-display" class="text-5xl md:text-6xl font-black text-white block text-center">0</span>
+                    <!-- ตัวเลขสถานะคะแนนติดลบ -->
+                    <div id="score-feedback-container" class="absolute top-full left-1/2 transform -translate-x-1/2 mt-1"></div>
                 </div>
             </div>
 
+            <!-- กล่องโจทย์ -->
+            <div class="bg-white/10 backdrop-blur-md rounded-3xl px-8 py-6 border-2 border-white/20 shadow-2xl max-w-4xl text-center w-11/12">
+                <h2 class="text-lg md:text-xl text-sky-300 mb-1 font-semibold">จงแปลงหน่วยต่อไปนี้</h2>
+                <p id="question-text" class="text-3xl md:text-5xl font-black text-white leading-tight drop-shadow-lg">
+                    โจทย์จะแสดงที่นี่
+                </p>
+            </div>
+        </div>
+
+        <!-- ลูกโป่งตัวเลือกแบบเดิม -->
+        <div class="balloon-container">
+            <div id="balloon-0" class="balloon-wrapper">
+                <div class="balloon"><span id="text-0" class="balloon-text">ตัวเลือก 1</span></div>
+                <div class="string"></div>
+            </div>
+            <div id="balloon-1" class="balloon-wrapper">
+                <div class="balloon"><span id="text-1" class="balloon-text">ตัวเลือก 2</span></div>
+                <div class="string"></div>
+            </div>
+            <div id="balloon-2" class="balloon-wrapper">
+                <div class="balloon"><span id="text-2" class="balloon-text">ตัวเลือก 3</span></div>
+                <div class="string"></div>
+            </div>
         </div>
     </div>
 
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen-overlay">
+        <h1 class="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-rose-400 mb-4 drop-shadow-sm text-center">Unit Converter Pop!</h1>
+        <h2 class="text-xl md:text-3xl font-semibold text-slate-300 mb-8 text-center">ตะลุยโจทย์แปลง 12 หน่วย (T ถึง p)</h2>
+        
+        <div class="bg-slate-800/80 p-6 md:p-8 rounded-3xl max-w-2xl border border-slate-600 mb-10 text-left text-lg md:text-xl space-y-4 backdrop-blur-sm shadow-2xl w-11/12">
+            <p class="flex items-center"><span class="text-2xl md:text-3xl mr-3">☝️</span> ใช้นิ้วชี้ เลื่อนไปจิ้มลูกโป่งคำตอบที่ถูกต้อง</p>
+            <p class="flex items-center"><span class="text-2xl md:text-3xl mr-3">⏱️</span> เริ่มเกมที่ 60 วินาที ค้างนิ้วไว้เพื่อตอบ!</p>
+            <p class="flex items-center text-yellow-300 font-semibold"><span class="text-2xl md:text-3xl mr-3">🎵</span> มีดนตรีเบสระทึกขวัญคลอดึงอารมณ์ตลอดการเล่น</p>
+            <div class="flex gap-4 mt-4 pt-4 border-t border-slate-600">
+                <div class="flex-1 bg-emerald-500/20 text-emerald-400 p-2 md:p-3 rounded-xl text-center font-bold">✅ ถูก: +5 วินาที</div>
+                <div class="flex-1 bg-rose-500/20 text-rose-400 p-2 md:p-3 rounded-xl text-center font-bold">❌ ผิด: -10 วินาที และ -2 คะแนน</div>
+            </div>
+        </div>
+
+        <div id="loading-camera" class="flex flex-col items-center">
+            <div class="loader-ring"></div>
+            <p class="text-sky-300 animate-pulse text-center">กำลังตั้งค่ากล้องเว็บแคม...<br>(โปรดกดยอมรับ)</p>
+        </div>
+        
+        <button id="start-btn" class="hidden px-10 py-4 md:px-12 md:py-5 bg-gradient-to-r from-sky-500 to-indigo-600 rounded-full text-2xl md:text-3xl font-black hover:scale-105 transition-all shadow-[0_0_30px_rgba(56,189,248,0.5)]">
+            เริ่มสนุกกับเกม! (เปิดเสียงด้วยนะ)
+        </button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen-overlay" style="display: none;">
+        <h1 class="text-6xl md:text-7xl font-black text-rose-500 mb-4 drop-shadow-[0_0_20px_rgba(244,63,94,0.5)]">หมดเวลา!</h1>
+        <h2 class="text-2xl md:text-3xl text-slate-300 mb-8 font-semibold">คะแนนรวมของคุณ</h2>
+        <div class="text-[8rem] md:text-[10rem] font-black text-yellow-400 mb-10 leading-none drop-shadow-[0_0_40px_rgba(250,204,21,0.6)]" id="final-score">0</div>
+        <button onclick="resetGame()" class="px-10 py-4 md:px-12 md:py-5 bg-gradient-to-r from-fuchsia-500 to-rose-500 rounded-full text-2xl md:text-3xl font-black hover:scale-105 transition-all shadow-[0_0_30px_rgba(236,72,153,0.5)]">
+            เล่นอีกครั้ง
+        </button>
+    </div>
+
     <script>
-        // --- DATA & CONSTANTS ---
-        const PREFIXES = [
-            { sym: 'T', name: 'Tera', val: '10^12' },
-            { sym: 'G', name: 'Giga', val: '10^9' },
-            { sym: 'M', name: 'Mega', val: '10^6' },
-            { sym: 'k', name: 'kilo', val: '10^3' },
-            { sym: 'h', name: 'hecto', val: '10^2' },
-            { sym: 'da', name: 'deka', val: '10^1' },
-            { sym: 'd', name: 'deci', val: '10^-1' },
-            { sym: 'c', name: 'centi', val: '10^-2' },
-            { sym: 'm', name: 'milli', val: '10^-3' },
-            { sym: 'μ', name: 'micro', val: '10^-6' },
-            { sym: 'n', name: 'nano', val: '10^-9' },
-            { sym: 'p', name: 'pico', val: '10^-12' }
-        ];
-
-        const HOVER_TIME_REQUIRED = 1.5; // seconds
-        const GAME_TIME = 30; // seconds
-
-        // --- GAME STATE ---
-        let state = {
-            screen: 'start', // start, game, end
-            score: 0,
-            timeLeft: 0,
-            timerInterval: null,
-            currentQuestion: null,
-            hoveredChoiceIndex: -1,
-            hoverProgress: 0, // 0 to 1
-            lastFrameTime: 0,
-            cursorX: 0,
-            cursorY: 0
-        };
-
-        // --- DOM ELEMENTS ---
-        const els = {
-            screenStart: document.getElementById('screen_start'),
-            screenGame: document.getElementById('screen_game'),
-            screenEnd: document.getElementById('screen_end'),
-            btnStart: document.getElementById('btn_start'),
-            btnRestart: document.getElementById('btn_restart'),
-            loadingAi: document.getElementById('loading_ai'),
-            
-            scoreDisplay: document.getElementById('score_display'),
-            timeDisplay: document.getElementById('time_display'),
-            questionText: document.getElementById('question_text'),
-            questionBox: document.getElementById('question_box'),
-            
-            choices: [
-                document.getElementById('choice_0'),
-                document.getElementById('choice_1'),
-                document.getElementById('choice_2'),
-                document.getElementById('choice_3')
-            ],
-            choiceTexts: document.querySelectorAll('.choice-text'),
-            progressBars: document.querySelectorAll('.progress-bar'),
-            
-            handCursor: document.getElementById('hand_cursor'),
-            gameContainer: document.getElementById('game_container'),
-            effectsContainer: document.getElementById('effects_container'),
-            finalScore: document.getElementById('final_score')
-        };
-
-        // --- AUDIO SYSTEM (Web Audio API) ---
+        // --- Web Audio API (ระบบดนตรีคลอและ SFX) ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const audioCtx = new AudioContext();
+        let audioCtx = null;
+        let bgMusicTimer = null;
+        let beatIndex = 0;
 
-        function playTone(freq, type, duration, vol = 0.1) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // ดนตรีเบสลุ้นระทึก (Cinema Drone Bass)
+        function startBgMusic() {
+            if (!audioCtx) return;
+            beatIndex = 0;
+            
+            function playNextBeat() {
+                if (!isPlaying) return;
+                
+                let tempo = timeLeft <= 15 ? 300 : 600; 
+                let octaveMultiplier = timeLeft <= 15 ? 2.0 : 1.0; 
+                
+                const sequence = [55.00, 58.27, 65.41, 61.74, 55.00, 65.41, 77.78, 73.42];
+                const freq = sequence[beatIndex % sequence.length] * octaveMultiplier;
+                
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+                
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(timeLeft <= 15 ? 450 : 250, audioCtx.currentTime);
+                
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (tempo / 1000) - 0.05);
+                
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + (tempo / 1000));
+                
+                if (beatIndex % 2 === 1) {
+                    playTensionClick();
+                }
+                
+                beatIndex++;
+                bgMusicTimer = setTimeout(playNextBeat, tempo);
+            }
+            
+            playNextBeat();
+        }
+
+        function playTensionClick() {
+            if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.start();
-            osc.stop(audioCtx.currentTime + duration);
+            osc.stop(audioCtx.currentTime + 0.04);
         }
 
-        const sfx = {
-            correct: () => {
-                playTone(600, 'sine', 0.1, 0.1);
-                setTimeout(() => playTone(800, 'sine', 0.2, 0.15), 100);
-                setTimeout(() => playTone(1200, 'sine', 0.3, 0.2), 200);
-            },
-            wrong: () => {
-                playTone(200, 'sawtooth', 0.3, 0.2);
-                setTimeout(() => playTone(150, 'sawtooth', 0.4, 0.2), 150);
-            },
-            tick: () => playTone(1000, 'sine', 0.05, 0.05),
-            hover: () => playTone(400, 'sine', 0.1, 0.02),
-            gameover: () => {
-                playTone(400, 'square', 0.3, 0.1);
-                setTimeout(() => playTone(300, 'square', 0.5, 0.1), 300);
+        function stopBgMusic() {
+            if (bgMusicTimer) {
+                clearTimeout(bgMusicTimer);
+                bgMusicTimer = null;
             }
-        };
+        }
 
-        // --- GAME LOGIC ---
+        // เอฟเฟกต์ตอบถูก (ติ๊ง!)
+        function playCorrectSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(850, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.25);
+        }
 
-        function initGame() {
-            els.btnStart.addEventListener('click', startGame);
-            els.btnRestart.addEventListener('click', startGame);
+        // เอฟเฟกต์ตอบผิด (ตื๊ด!)
+        function playWrongSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        // --- Database: โจทย์แปลงหน่วยของจริง (12 Prefixes) ---
+        const prefixQuestions = [
+            // การแปลงหน่วยที่มีผลลัพธ์เป็นทศนิยม (รวมข้อ 5 mm = ? cm)
+            { q: "5 มิลลิเมตร (mm) = ? เซนติเมตร (cm)", c: "0.5", w1: "50", w2: "0.05" },
+            { q: "12 เซนติเมตร (cm) = ? เมตร (m)", c: "0.12", w1: "1.2", w2: "120" },
+            { q: "350 กรัม (g) = ? กิโลกรัม (kg)", c: "0.35", w1: "3.5", w2: "35" },
+            { q: "8 มิลลิกรัม (mg) = ? กรัม (g)", c: "0.008", w1: "0.08", w2: "0.8" },
+            { q: "45 เดซิลิตร (dL) = ? ลิตร (L)", c: "4.5", w1: "0.45", w2: "450" },
+            { q: "250 มิลลิลิตร (mL) = ? ลิตร (L)", c: "0.25", w1: "2.5", w2: "25" },
+            { q: "75 เซนติเมตร (cm) = ? เมตร (m)", c: "0.75", w1: "7.5", w2: "0.075" },
+            { q: "9 มิลลิเมตร (mm) = ? เมตร (m)", c: "0.009", w1: "0.09", w2: "0.9" },
+
+            // การแปลงปกติ
+            { q: "2 กิโลเมตร (km) = ? เมตร (m)", c: "2,000", w1: "200", w2: "20,000" },
+            { q: "5,000 เมตร (m) = ? กิโลเมตร (km)", c: "5", w1: "50", w2: "0.5" },
+            { q: "4 เมตร (m) = ? เซนติเมตร (cm)", c: "400", w1: "40", w2: "4,000" },
+            { q: "300 เซนติเมตร (cm) = ? เมตร (m)", c: "3", w1: "30", w2: "0.3" },
+            { q: "7 เซนติเมตร (cm) = ? มิลลิเมตร (mm)", c: "70", w1: "700", w2: "7" },
+            { q: "80 มิลลิเมตร (mm) = ? เซนติเมตร (cm)", c: "8", w1: "800", w2: "0.8" },
+            { q: "5 เฮกโตเมตร (hm) = ? เมตร (m)", c: "500", w1: "50", w2: "5,000" },
+            { q: "4 เดคาลิตร (daL) = ? ลิตร (L)", c: "40", w1: "400", w2: "4" },
+            { q: "20 เดซิเมตร (dm) = ? เมตร (m)", c: "2", w1: "200", w2: "0.2" },
+            { q: "1 กิโลกรัม (kg) = ? กรัม (g)", c: "1,000", w1: "100", w2: "10,000" },
+            
+            // กลุ่มหน่วยใหญ่ (M, G, T)
+            { q: "3 เมกะไบต์ (MB) = ? ไบต์ (B)", c: "3 × 10⁶", w1: "3 × 10⁹", w2: "3 × 10³" },
+            { q: "5 จิกะเฮิรตซ์ (GHz) = ? เฮิรตซ์ (Hz)", c: "5 × 10⁹", w1: "5 × 10⁶", w2: "5 × 10¹²" },
+            { q: "2 เทระวัตต์ (TW) = ? วัตต์ (W)", c: "2 × 10¹²", w1: "2 × 10⁹", w2: "2 × 10⁶" },
+            { q: "4 เมกะวัตต์ (MW) = ? กิโลวัตต์ (kW)", c: "4,000", w1: "400", w2: "40,000" },
+            { q: "7 จิกะไบต์ (GB) = ? เมกะไบต์ (MB)", c: "7,000", w1: "70", w2: "700" },
+            { q: "1 เทระไบต์ (TB) = ? จิกะไบต์ (GB)", c: "1,000", w1: "100", w2: "10" },
+
+            // กลุ่มหน่วยเล็ก (μ, n, p)
+            { q: "6 ไมโครเมตร (μm) = ? เมตร (m)", c: "6 × 10⁻⁶", w1: "6 × 10⁻³", w2: "6 × 10⁻⁹" },
+            { q: "9 นาโนวินาที (ns) = ? วินาที (s)", c: "9 × 10⁻⁹", w1: "9 × 10⁻⁶", w2: "9 × 10⁻¹²" },
+            { q: "4 พิโกฟารัด (pF) = ? ฟารัด (F)", c: "4 × 10⁻¹²", w1: "4 × 10⁻⁹", w2: "4 × 10⁻⁶" },
+            { q: "5,000 นาโนเมตร (nm) = ? ไมโครเมตร (μm)", c: "5", w1: "50", w2: "0.5" },
+            { q: "2,000 ไมโครกรัม (μg) = ? มิลลิกรัม (mg)", c: "2", w1: "20", w2: "0.2" },
+            
+            // ข้ามหน่วย Prefix ไปยัง Prefix ต่างๆ
+            { q: "1 กิโลเมตร (km) = ? เซนติเมตร (cm)", c: "100,000", w1: "10,000", w2: "1,000,000" },
+            { q: "1 เมตร (m) = ? มิลลิเมตร (mm)", c: "1,000", w1: "100", w2: "10,000" },
+            { q: "1 มิลลิเมตร (mm) = ? ไมโครเมตร (μm)", c: "1,000", w1: "100", w2: "1,000,000" },
+            { q: "1 เซนติลิตร (cL) = ? มิลลิลิตร (mL)", c: "10", w1: "100", w2: "1" }
+        ];
+
+        // --- Game State ---
+        let isPlaying = false;
+        let score = 0;
+        let timeLeft = 60; // 60 วินาที
+        let timerInterval;
+        let correctBoxIndex = -1;
+
+        let hoverTargetIndex = -1;
+        let hoverProgress = 0;
+        const hoverSpeed = 2.5;
+
+        // Elements
+        const videoElement = document.getElementById('webcam-video');
+        const canvasElement = document.getElementById('game-canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const balloonWrappers = [
+            document.getElementById('balloon-0'),
+            document.getElementById('balloon-1'),
+            document.getElementById('balloon-2')
+        ];
+        const balloonBalloons = [
+            balloonWrappers[0].querySelector('.balloon'),
+            balloonWrappers[1].querySelector('.balloon'),
+            balloonWrappers[2].querySelector('.balloon')
+        ];
+        const balloonTexts = [
+            document.getElementById('text-0'),
+            document.getElementById('text-1'),
+            document.getElementById('text-2')
+        ];
+
+        function resizeCanvas() {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function loadQuestion() {
+            const q = prefixQuestions[Math.floor(Math.random() * prefixQuestions.length)];
+            document.getElementById('question-text').innerHTML = q.q;
+
+            let choices = [
+                { text: q.c, isCorrect: true },
+                { text: q.w1, isCorrect: false },
+                { text: q.w2, isCorrect: false }
+            ];
+            
+            choices = shuffle(choices);
+
+            for (let i = 0; i < 3; i++) {
+                balloonTexts[i].innerText = choices[i].text;
+                if (choices[i].isCorrect) { correctBoxIndex = i; }
+                balloonWrappers[i].classList.remove('hovered');
+            }
+            hoverProgress = 0;
+            hoverTargetIndex = -1;
+        }
+
+        function triggerFlash(type) {
+            const flash = document.getElementById('flash-overlay');
+            flash.className = type === 'correct' ? 'flash-green' : 'flash-red';
+            flash.style.opacity = '1';
+            setTimeout(() => { flash.style.opacity = '0'; }, 300);
+        }
+
+        function showFloatingTime(amount) {
+            const container = document.getElementById('time-feedback-container');
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = amount > 0 ? `+${amount}` : amount;
+            el.style.color = amount > 0 ? '#10b981' : '#f43f5e';
+            container.appendChild(el);
+            setTimeout(() => { el.remove(); }, 1500);
+        }
+
+        function showFloatingScore(amount) {
+            const container = document.getElementById('score-feedback-container');
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = amount > 0 ? `+${amount}` : amount;
+            el.style.color = amount > 0 ? '#fbbf24' : '#ef4444';
+            container.appendChild(el);
+            setTimeout(() => { el.remove(); }, 1500);
+        }
+
+        function handleAnswer(selectedIndex) {
+            if (!isPlaying) return;
+
+            if (selectedIndex === correctBoxIndex) {
+                // ตอบถูก
+                playCorrectSound();
+                balloonBalloons[selectedIndex].style.transform = 'scale(1.5)';
+                balloonBalloons[selectedIndex].style.opacity = '0';
+                
+                score++;
+                timeLeft += 5;
+                document.getElementById('score-display').innerText = score;
+                triggerFlash('correct');
+                showFloatingTime(5);
+
+                setTimeout(() => {
+                    balloonBalloons[selectedIndex].style.transform = '';
+                    balloonBalloons[selectedIndex].style.opacity = '1';
+                    loadQuestion();
+                }, 300);
+            } else {
+                // ตอบผิด
+                playWrongSound();
+                balloonBalloons[selectedIndex].animate([
+                    { transform: 'translateX(0)' },
+                    { transform: 'translateX(-10px)' },
+                    { transform: 'translateX(10px)' },
+                    { transform: 'translateX(0)' }
+                ], { duration: 300 });
+
+                timeLeft -= 10;
+                score -= 2; // หักคะแนน 2 คะแนน (สามารถติดลบต่ำกว่า 0 ได้แล้ว)
+                document.getElementById('score-display').innerText = score;
+                
+                triggerFlash('wrong');
+                showFloatingTime(-10);
+                showFloatingScore(-2); // แสดงผลตัวเลขลอยเตือนใจ -2
+                
+                hoverProgress = 0;
+                hoverTargetIndex = -1;
+                updateTimerDisplay();
+            }
+        }
+
+        function updateTimerDisplay() {
+            const displayTime = Math.max(0, timeLeft);
+            const timerEl = document.getElementById('timer-display');
+            timerEl.innerText = displayTime;
+            if(displayTime <= 10) timerEl.classList.add('text-rose-500');
+            else timerEl.classList.remove('text-rose-500');
         }
 
         function startGame() {
-            state.score = 0;
-            state.timeLeft = GAME_TIME;
-            updateUI();
+            initAudio(); // เรียกใช้งาน Audio Context
             
-            els.screenStart.classList.add('hidden');
-            els.screenEnd.classList.add('hidden');
-            els.screenGame.classList.remove('hidden');
-            state.screen = 'game';
-
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-
-            generateQuestion();
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'flex';
             
-            clearInterval(state.timerInterval);
-            state.timerInterval = setInterval(() => {
-                state.timeLeft--;
-                if(state.timeLeft <= 10 && state.timeLeft > 0) sfx.tick();
+            score = 0;
+            timeLeft = 60; // เริ่ม 60 วิ
+            isPlaying = true;
+            
+            document.getElementById('score-display').innerText = score;
+            updateTimerDisplay();
+            loadQuestion();
+            startBgMusic(); // เปิดดนตรีเบสลุ้นระทึก
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
                 
-                if (state.timeLeft <= 0) {
+                if (timeLeft <= 0) {
                     endGame();
-                } else {
-                    updateUI();
                 }
             }, 1000);
         }
 
         function endGame() {
-            clearInterval(state.timerInterval);
-            state.screen = 'end';
-            state.timeLeft = 0;
-            updateUI();
-            sfx.gameover();
-            els.screenGame.classList.add('hidden');
-            els.screenEnd.classList.remove('hidden');
-            els.finalScore.innerText = state.score;
-        }
-
-        function generateQuestion() {
-            // Reset hovers
-            state.hoveredChoiceIndex = -1;
-            state.hoverProgress = 0;
-            els.progressBars.forEach(pb => pb.style.width = '0%');
-            els.choices.forEach(c => c.classList.remove('hovered'));
-
-            // Pop animation for question
-            els.questionBox.style.transform = 'scale(0.8)';
-            setTimeout(() => els.questionBox.style.transform = 'scale(1)', 150);
-
-            // Determine question mode (0 = ask symbol, 1 = ask value)
-            const mode = Math.random() > 0.5 ? 0 : 1;
+            isPlaying = false;
+            clearInterval(timerInterval);
+            stopBgMusic(); // ปิดเสียงเพลงเบส
+            document.getElementById('game-ui').style.display = 'none';
+            document.getElementById('game-over-screen').style.display = 'flex';
+            document.getElementById('final-score').innerText = score;
             
-            // Pick correct answer
-            let correctIdx = Math.floor(Math.random() * PREFIXES.length);
-            let correctItem = PREFIXES[correctIdx];
-            
-            // Pick 3 wrong answers
-            let options = [correctItem];
-            while (options.length < 4) {
-                let rnd = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
-                if (!options.includes(rnd)) {
-                    options.push(rnd);
-                }
-            }
-
-            // Shuffle options
-            options.sort(() => Math.random() - 0.5);
-            let correctOptionIndex = options.indexOf(correctItem);
-
-            if (mode === 0) {
-                els.questionText.innerHTML = `ค่า <span class="text-yellow-400">${correctItem.val}</span> คือสัญลักษณ์ใด?`;
-                state.currentQuestion = {
-                    text: correctItem.val,
-                    options: options.map(o => o.sym),
-                    correctIdx: correctOptionIndex
-                };
-            } else {
-                els.questionText.innerHTML = `สัญลักษณ์ <span class="text-yellow-400">${correctItem.sym} (${correctItem.name})</span> มีค่าเท่าใด?`;
-                state.currentQuestion = {
-                    text: correctItem.sym,
-                    options: options.map(o => o.val),
-                    correctIdx: correctOptionIndex
-                };
-            }
-
-            // Update UI
-            options.forEach((opt, idx) => {
-                els.choiceTexts[idx].innerText = state.currentQuestion.options[idx];
-            });
+            playWrongSound();
+            setTimeout(playWrongSound, 150);
         }
 
-        function handleAnswer(selectedIndex, x, y) {
-            // Prevent multiple triggers
-            if(state.hoverProgress < 1) return;
-            state.hoverProgress = 0; // reset instantly
-
-            const isCorrect = selectedIndex === state.currentQuestion.correctIdx;
-            
-            if (isCorrect) {
-                state.score += 2;
-                sfx.correct();
-                showFloatingText("+2", x, y, 'float-up-effect');
-                els.gameContainer.classList.remove('flash-green-effect');
-                void els.gameContainer.offsetWidth; // trigger reflow
-                els.gameContainer.classList.add('flash-green-effect');
-                
-                // Confetti!
-                confetti({
-                    particleCount: 80,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#38bdf8', '#facc15', '#4ade80']
-                });
-            } else {
-                state.timeLeft = Math.max(0, state.timeLeft - 5);
-                sfx.wrong();
-                showFloatingText("-5 วิ", x, y, 'float-down-effect');
-                
-                // Shake and flash red
-                els.gameContainer.classList.remove('shake-effect', 'flash-red-effect');
-                void els.gameContainer.offsetWidth;
-                els.gameContainer.classList.add('shake-effect', 'flash-red-effect');
-                
-                // Red animate time
-                els.timeDisplay.classList.add('text-red-500');
-                setTimeout(() => els.timeDisplay.classList.remove('text-red-500'), 500);
-            }
-
-            updateUI();
-            if (state.timeLeft > 0) {
-                generateQuestion();
-            } else {
-                endGame();
-            }
+        function resetGame() {
+            document.getElementById('game-over-screen').style.display = 'none';
+            startGame();
         }
 
-        function showFloatingText(text, x, y, cssClass) {
-            const el = document.createElement('div');
-            el.innerText = text;
-            el.className = cssClass;
-            el.style.left = `${x}px`;
-            el.style.top = `${y}px`;
-            els.effectsContainer.appendChild(el);
-            setTimeout(() => el.remove(), 1000);
-        }
+        document.getElementById('start-btn').addEventListener('click', startGame);
 
-        function updateUI() {
-            els.scoreDisplay.innerText = state.score;
-            els.timeDisplay.innerText = state.timeLeft;
-        }
-
-        // --- MEDIAPIPE & CAMERA INTEGRATION ---
-        const videoElement = document.getElementById('input_video');
-        const canvasElement = document.getElementById('output_canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-
-        function onResults(results) {
-            // Draw video to canvas (mirrored via CSS, so we draw normally here)
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                // Draw skeleton (optional, but looks cool)
-                for (const landmarks of results.multiHandLandmarks) {
-                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#ffffff30', lineWidth: 2});
-                    drawLandmarks(canvasCtx, landmarks, {color: '#38bdf880', lineWidth: 1, radius: 2});
-                }
-
-                // Game interaction logic
-                if (state.screen === 'game') {
-                    // Get index finger tip (landmark 8)
-                    const indexFinger = results.multiHandLandmarks[0][8];
-                    
-                    // Convert normalized coordinates to screen pixels
-                    // Note: Video is mirrored horizontally via CSS transform: scaleX(-1)
-                    // So to get logical screen position, we must invert X
-                    const mappedX = (1 - indexFinger.x) * els.gameContainer.offsetWidth;
-                    const mappedY = indexFinger.y * els.gameContainer.offsetHeight;
-
-                    state.cursorX = mappedX;
-                    state.cursorY = mappedY;
-
-                    // Update cursor UI
-                    els.handCursor.style.left = `${mappedX}px`;
-                    els.handCursor.style.top = `${mappedY}px`;
-                    els.handCursor.classList.remove('hidden');
-
-                    // Check collisions with choices
-                    let foundHover = -1;
-                    els.choices.forEach((choiceEl, idx) => {
-                        const rect = choiceEl.getBoundingClientRect();
-                        const containerRect = els.gameContainer.getBoundingClientRect();
-                        
-                        // Relative rects
-                        const relRect = {
-                            left: rect.left - containerRect.left,
-                            right: rect.right - containerRect.left,
-                            top: rect.top - containerRect.top,
-                            bottom: rect.bottom - containerRect.top
-                        };
-
-                        if (mappedX >= relRect.left && mappedX <= relRect.right &&
-                            mappedY >= relRect.top && mappedY <= relRect.bottom) {
-                            foundHover = idx;
-                        }
-                    });
-
-                    // Time delta calculation
-                    const now = performance.now();
-                    const dt = (now - state.lastFrameTime) / 1000;
-                    state.lastFrameTime = now;
-
-                    // Hover logic
-                    if (foundHover !== -1) {
-                        if (state.hoveredChoiceIndex === foundHover) {
-                            // Continue hovering
-                            state.hoverProgress += dt / HOVER_TIME_REQUIRED;
-                            
-                            // Visual feedback
-                            els.choices[foundHover].classList.add('hovered');
-                            els.progressBars[foundHover].style.width = `${Math.min(state.hoverProgress * 100, 100)}%`;
-
-                            if(state.hoverProgress >= 1.0) {
-                                handleAnswer(foundHover, mappedX, mappedY);
-                            }
-                        } else {
-                            // New hover started
-                            sfx.hover();
-                            resetHovers();
-                            state.hoveredChoiceIndex = foundHover;
-                            state.hoverProgress = 0;
-                        }
-                    } else {
-                        // Not hovering any
-                        resetHovers();
-                    }
-                }
-            } else {
-                els.handCursor.classList.add('hidden');
-                resetHovers();
-                state.lastFrameTime = performance.now();
-            }
-            canvasCtx.restore();
-        }
-
-        function resetHovers() {
-            state.hoveredChoiceIndex = -1;
-            state.hoverProgress = 0;
-            els.progressBars.forEach(pb => pb.style.width = '0%');
-            els.choices.forEach(c => c.classList.remove('hovered'));
-        }
-
-        // Initialize MediaPipe Hands
+        // --- MediaPipe Hand Tracking (วาดเส้นข้อต่อสไตล์ดั้งเดิม) ---
         const hands = new Hands({locateFile: (file) => {
             return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
         }});
-        
+
         hands.setOptions({
             maxNumHands: 1,
             modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
         });
-        
-        hands.onResults(onResults);
 
-        // Setup Camera
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                // Ensure canvas size matches video size logically
-                if (canvasElement.width !== videoElement.videoWidth) {
-                    canvasElement.width = videoElement.videoWidth;
-                    canvasElement.height = videoElement.videoHeight;
+        function isPointInCircle(px, py, rect) {
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const radius = Math.max(rect.width, rect.height) / 2;
+            const dist = Math.sqrt((px - cx) ** 2 + (py - cy) ** 2);
+            return dist <= radius;
+        }
+
+        hands.onResults((results) => {
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            let currentHoverIndex = -1;
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+
+                // วาดโครงกระดูกนิ้วมือ (Skeleton)
+                canvasCtx.save();
+                canvasCtx.scale(-1, 1);
+                canvasCtx.translate(-canvasElement.width, 0);
+
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: 'rgba(56, 189, 248, 0.6)', lineWidth: 3});
+                drawLandmarks(canvasCtx, landmarks, {color: 'rgba(244, 63, 94, 0.9)', lineWidth: 1, radius: 3});
+                
+                canvasCtx.restore();
+
+                // ปลายนิ้วชี้ (Landmark 8) เป็นจุดคำนวณเคอร์เซอร์หลัก
+                const indexFinger = landmarks[8];
+                const px = (1 - indexFinger.x) * canvasElement.width;
+                const py = indexFinger.y * canvasElement.height;
+
+                // วาดวงกลมเหลืองเพื่อชี้พอยต์เตอร์
+                canvasCtx.beginPath();
+                canvasCtx.arc(px, py, 12, 0, 2 * Math.PI);
+                canvasCtx.fillStyle = '#facc15';
+                canvasCtx.fill();
+                canvasCtx.lineWidth = 3;
+                canvasCtx.strokeStyle = 'white';
+                canvasCtx.stroke();
+
+                if (isPlaying) {
+                    for (let i = 0; i < 3; i++) {
+                        const rect = balloonBalloons[i].getBoundingClientRect();
+                        if (isPointInCircle(px, py, rect)) {
+                            currentHoverIndex = i;
+                            balloonWrappers[i].classList.add('hovered');
+                        } else {
+                            balloonWrappers[i].classList.remove('hovered');
+                        }
+                    }
+
+                    if (currentHoverIndex !== -1) {
+                        if (hoverTargetIndex === currentHoverIndex) {
+                            hoverProgress += hoverSpeed;
+                            
+                            // วาดวงแหวนกำลังประมวลผลคำตอบ (Loading Ring)
+                            canvasCtx.beginPath();
+                            canvasCtx.arc(px, py, 25, -Math.PI / 2, (-Math.PI / 2) + ((hoverProgress / 100) * 2 * Math.PI));
+                            canvasCtx.lineWidth = 6;
+                            canvasCtx.strokeStyle = '#0ea5e9';
+                            canvasCtx.stroke();
+
+                            if (hoverProgress >= 100) {
+                                handleAnswer(currentHoverIndex);
+                                hoverProgress = 0;
+                            }
+                        } else {
+                            hoverTargetIndex = currentHoverIndex;
+                            hoverProgress = 0;
+                        }
+                    }
                 }
-                await hands.send({image: videoElement});
-            },
-            width: 1280,
-            height: 720
+            }
+
+            if (currentHoverIndex === -1 && isPlaying) {
+                hoverTargetIndex = -1;
+                hoverProgress = 0;
+                balloonWrappers.forEach(b => b.classList.remove('hovered'));
+            }
         });
 
-        // Start Camera and allow user to start
-        camera.start()
-            .then(() => {
-                els.loadingAi.classList.add('hidden');
-                els.btnStart.classList.remove('hidden');
-            })
-            .catch(err => {
-                els.loadingAi.innerHTML = `<p class="text-red-400">ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตการใช้งานกล้องและรีเฟรชหน้าจอ</p>`;
-                console.error(err);
-            });
+        const camera = new Camera(videoElement, {
+            onFrame: async () => { await hands.send({image: videoElement}); },
+            width: 640, height: 480
+        });
 
-        // Init bindings
-        initGame();
+        camera.start().then(() => {
+            document.getElementById('loading-camera').style.display = 'none';
+            document.getElementById('start-btn').classList.remove('hidden');
+        }).catch(err => {
+            console.error(err);
+            document.getElementById('loading-camera').innerHTML = `<p class="text-rose-500 font-bold text-center">ไม่สามารถเข้าถึงกล้องได้<br>กรุณาตรวจสอบการอนุญาตใช้งานกล้อง</p>`;
+        });
 
     </script>
 </body>
