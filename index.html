@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมแทรกกิ้งนิ้วมือ: ตะลุยโจทย์แปลง 12 หน่วย</title>
+    <title>เกมแทรกกิ้งนิ้วมือ: ตะลุยโจทย์แปลง 12 หน่วย + ลูกโป่งจอมกวน</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,6 +23,7 @@
             background-color: #0f172a;
             font-family: 'Kanit', sans-serif;
             user-select: none;
+            position: relative;
         }
 
         #webcam-video {
@@ -57,7 +58,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
 
         /* --- UI Top Section --- */
@@ -66,8 +67,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 20px;
-            gap: 15px;
+            padding-top: 15px;
+            gap: 12px;
         }
 
         /* --- Balloon Styles --- */
@@ -75,9 +76,9 @@
             width: 100%;
             display: flex;
             justify-content: center;
-            gap: 10%;
+            gap: 8%;
             padding: 0 5%;
-            margin-bottom: 5vh;
+            margin-bottom: 2vh; /* ขยับพื้นที่วางลูกโป่งลงมาด้านล่างสุด */
         }
 
         .balloon-wrapper {
@@ -94,12 +95,13 @@
 
         @keyframes float {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
+            50% { transform: translateY(-12px); } /* ลดแรงลอยขึ้นลงเพื่อไม่ให้โครงเครงสูงเกินไป */
         }
 
         .balloon {
-            width: clamp(130px, 16vw, 190px);
-            height: clamp(160px, 19vw, 230px);
+            /* ปรับลดขนาดลูกโป่งลงเล็กน้อยเพื่อความคลีนและป้องกันการเลยขอบจอ */
+            width: clamp(110px, 13vw, 160px);
+            height: clamp(140px, 16vw, 200px);
             border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
             background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 20%),
                         radial-gradient(circle at 50% 50%, var(--bg-color) 0%, var(--border-color) 100%);
@@ -128,7 +130,7 @@
 
         .string {
             width: 2px;
-            height: clamp(40px, 8vh, 80px);
+            height: clamp(20px, 4vh, 50px); /* หดความยาวสายป่านลงเพื่อให้ลูกโป่งอยู่ต่ำลง */
             background-color: rgba(255, 255, 255, 0.5);
             margin-top: 8px;
         }
@@ -138,7 +140,7 @@
         #balloon-2 .balloon { --bg-color: #10b981; --border-color: #047857; } 
 
         .balloon-text {
-            font-size: clamp(1.4rem, 2.2vw, 2rem);
+            font-size: clamp(1.2rem, 1.8vw, 1.8rem); /* ปรับขนาดฟอนต์ให้เข้ากับขนาดลูกโป่งใหม่ */
             font-weight: 800;
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -146,12 +148,21 @@
             z-index: 2;
             word-break: break-word;
             line-height: 1.2;
-            padding: 10px;
+            padding: 8px;
         }
 
         .balloon-wrapper.hovered .balloon {
             transform: scale(1.1);
             filter: brightness(1.2);
+        }
+
+        /* --- Crazy Troll Balloon Animation --- */
+        @keyframes crazy-wobble {
+            0%, 100% { transform: rotate(-10deg) scale(1); }
+            50% { transform: rotate(10deg) scale(1.05); }
+        }
+        .crazy-balloon {
+            animation: crazy-wobble 1.5s ease-in-out infinite !important;
         }
 
         /* --- Screens --- */
@@ -192,10 +203,11 @@
             z-index: 30;
             animation: floatUp 1.5s forwards;
             pointer-events: none;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
         }
         @keyframes floatUp {
             0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-60px); }
+            100% { opacity: 0; transform: translateY(-80px); }
         }
 
         .loader-ring {
@@ -252,8 +264,8 @@
             </div>
         </div>
 
-        <!-- ลูกโป่งตัวเลือกแบบเดิม -->
-        <div class="balloon-container">
+        <!-- ลูกโป่งตัวเลือกทั่วไป -->
+        <div class="balloon-container relative">
             <div id="balloon-0" class="balloon-wrapper">
                 <div class="balloon"><span id="text-0" class="balloon-text">ตัวเลือก 1</span></div>
                 <div class="string"></div>
@@ -267,17 +279,29 @@
                 <div class="string"></div>
             </div>
         </div>
+
+        <!-- ลูกโป่งพิเศษสุดกวน (สุ่มโผล่ทุกๆ 15 วินาที - ค้างอยู่บนหน้าจอจนกว่าจะเจาะแตก) -->
+        <div id="balloon-special" class="balloon-wrapper absolute crazy-balloon" style="display: none; transition: bottom 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 25;">
+            <div class="balloon animate-pulse" style="--bg-color: #a855f7; --border-color: #facc15; width: 120px; height: 160px; box-shadow: 0 0 25px rgba(168, 85, 247, 0.65);">
+                <span id="text-special" class="balloon-text text-yellow-300 text-4xl">🤪</span>
+            </div>
+            <div class="string" style="height: 35px;"></div>
+        </div>
+
+        <!-- เลเยอร์พิเศษสำหรับแสดงตัวอักษรเอฟเฟกต์ลอยหน้าจอ -->
+        <div id="floating-text-layer" class="absolute top-0 left-0 w-full h-full pointer-events-none z-30"></div>
     </div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="screen-overlay">
         <h1 class="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-fuchsia-400 to-rose-400 mb-4 drop-shadow-sm text-center">Unit Converter Pop!</h1>
-        <h2 class="text-xl md:text-3xl font-semibold text-slate-300 mb-8 text-center">ตะลุยโจทย์แปลง 12 หน่วย (T ถึง p)</h2>
+        <h2 class="text-xl md:text-3xl font-semibold text-slate-300 mb-8 text-center">ตะลุยโจทย์แปลง 12 หน่วย + แกล้งป่วน</h2>
         
         <div class="bg-slate-800/80 p-6 md:p-8 rounded-3xl max-w-2xl border border-slate-600 mb-10 text-left text-lg md:text-xl space-y-4 backdrop-blur-sm shadow-2xl w-11/12">
             <p class="flex items-center"><span class="text-2xl md:text-3xl mr-3">☝️</span> ใช้นิ้วชี้ เลื่อนไปจิ้มลูกโป่งคำตอบที่ถูกต้อง</p>
             <p class="flex items-center"><span class="text-2xl md:text-3xl mr-3">⏱️</span> เริ่มเกมที่ 60 วินาที ค้างนิ้วไว้เพื่อตอบ!</p>
-            <p class="flex items-center text-yellow-300 font-semibold"><span class="text-2xl md:text-3xl mr-3">🎵</span> มีดนตรีเบสระทึกขวัญคลอดึงอารมณ์ตลอดการเล่น</p>
+            <p class="flex items-center text-yellow-300 font-semibold"><span class="text-2xl md:text-3xl mr-3">🎵</span> มีดนตรีเบสระทึกขวัญ และเอฟเฟกต์เสียงลุ้นแกล้ง!</p>
+            <p class="flex items-center text-fuchsia-400 font-semibold"><span class="text-2xl md:text-3xl mr-3">🤪</span> ระวัง! ทุกๆ 15 วินาทีจะมีลูกโป่งกวนประสาทสุ่มบวก/ลบคะแนนและเวลา ลอยมาค้างเพื่อแกล้งคุณ!</p>
             <div class="flex gap-4 mt-4 pt-4 border-t border-slate-600">
                 <div class="flex-1 bg-emerald-500/20 text-emerald-400 p-2 md:p-3 rounded-xl text-center font-bold">✅ ถูก: +5 วินาที</div>
                 <div class="flex-1 bg-rose-500/20 text-rose-400 p-2 md:p-3 rounded-xl text-center font-bold">❌ ผิด: -10 วินาที และ -2 คะแนน</div>
@@ -418,9 +442,44 @@
             osc.stop(audioCtx.currentTime + 0.3);
         }
 
+        // เอฟเฟกต์เสียงลูกโป่งแกล้งเมื่อได้รับโชคดี (เสียงสไลด์แหลมขึ้นสว่างสดใส)
+        function playSpecialLuckySound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (Arpeggio)
+            freqs.forEach((f, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(f, now + index * 0.08);
+                gain.gain.setValueAtTime(0.2, now + index * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.08 + 0.15);
+                osc.start(now + index * 0.08);
+                osc.stop(now + index * 0.08 + 0.15);
+            });
+        }
+
+        // เอฟเฟกต์เสียงโดนลูกโป่งแกล้งแกง (เสียงรูดต่ำลงสไตล์มุกตลกการ์ตูน)
+        function playSpecialUnluckySound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.45);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            osc.start(now);
+            osc.stop(now + 0.45);
+        }
+
         // --- Database: โจทย์แปลงหน่วยของจริง (12 Prefixes) ---
         const prefixQuestions = [
-            // การแปลงหน่วยที่มีผลลัพธ์เป็นทศนิยม (รวมข้อ 5 mm = ? cm)
             { q: "5 มิลลิเมตร (mm) = ? เซนติเมตร (cm)", c: "0.5", w1: "50", w2: "0.05" },
             { q: "12 เซนติเมตร (cm) = ? เมตร (m)", c: "0.12", w1: "1.2", w2: "120" },
             { q: "350 กรัม (g) = ? กิโลกรัม (kg)", c: "0.35", w1: "3.5", w2: "35" },
@@ -429,8 +488,6 @@
             { q: "250 มิลลิลิตร (mL) = ? ลิตร (L)", c: "0.25", w1: "2.5", w2: "25" },
             { q: "75 เซนติเมตร (cm) = ? เมตร (m)", c: "0.75", w1: "7.5", w2: "0.075" },
             { q: "9 มิลลิเมตร (mm) = ? เมตร (m)", c: "0.009", w1: "0.09", w2: "0.9" },
-
-            // การแปลงปกติ
             { q: "2 กิโลเมตร (km) = ? เมตร (m)", c: "2,000", w1: "200", w2: "20,000" },
             { q: "5,000 เมตร (m) = ? กิโลเมตร (km)", c: "5", w1: "50", w2: "0.5" },
             { q: "4 เมตร (m) = ? เซนติเมตร (cm)", c: "400", w1: "40", w2: "4,000" },
@@ -441,23 +498,17 @@
             { q: "4 เดคาลิตร (daL) = ? ลิตร (L)", c: "40", w1: "400", w2: "4" },
             { q: "20 เดซิเมตร (dm) = ? เมตร (m)", c: "2", w1: "200", w2: "0.2" },
             { q: "1 กิโลกรัม (kg) = ? กรัม (g)", c: "1,000", w1: "100", w2: "10,000" },
-            
-            // กลุ่มหน่วยใหญ่ (M, G, T)
             { q: "3 เมกะไบต์ (MB) = ? ไบต์ (B)", c: "3 × 10⁶", w1: "3 × 10⁹", w2: "3 × 10³" },
             { q: "5 จิกะเฮิรตซ์ (GHz) = ? เฮิรตซ์ (Hz)", c: "5 × 10⁹", w1: "5 × 10⁶", w2: "5 × 10¹²" },
             { q: "2 เทระวัตต์ (TW) = ? วัตต์ (W)", c: "2 × 10¹²", w1: "2 × 10⁹", w2: "2 × 10⁶" },
             { q: "4 เมกะวัตต์ (MW) = ? กิโลวัตต์ (kW)", c: "4,000", w1: "400", w2: "40,000" },
             { q: "7 จิกะไบต์ (GB) = ? เมกะไบต์ (MB)", c: "7,000", w1: "70", w2: "700" },
             { q: "1 เทระไบต์ (TB) = ? จิกะไบต์ (GB)", c: "1,000", w1: "100", w2: "10" },
-
-            // กลุ่มหน่วยเล็ก (μ, n, p)
             { q: "6 ไมโครเมตร (μm) = ? เมตร (m)", c: "6 × 10⁻⁶", w1: "6 × 10⁻³", w2: "6 × 10⁻⁹" },
             { q: "9 นาโนวินาที (ns) = ? วินาที (s)", c: "9 × 10⁻⁹", w1: "9 × 10⁻⁶", w2: "9 × 10⁻¹²" },
             { q: "4 พิโกฟารัด (pF) = ? ฟารัด (F)", c: "4 × 10⁻¹²", w1: "4 × 10⁻⁹", w2: "4 × 10⁻⁶" },
             { q: "5,000 นาโนเมตร (nm) = ? ไมโครเมตร (μm)", c: "5", w1: "50", w2: "0.5" },
             { q: "2,000 ไมโครกรัม (μg) = ? มิลลิกรัม (mg)", c: "2", w1: "20", w2: "0.2" },
-            
-            // ข้ามหน่วย Prefix ไปยัง Prefix ต่างๆ
             { q: "1 กิโลเมตร (km) = ? เซนติเมตร (cm)", c: "100,000", w1: "10,000", w2: "1,000,000" },
             { q: "1 เมตร (m) = ? มิลลิเมตร (mm)", c: "1,000", w1: "100", w2: "10,000" },
             { q: "1 มิลลิเมตร (mm) = ? ไมโครเมตร (μm)", c: "1,000", w1: "100", w2: "1,000,000" },
@@ -470,6 +521,12 @@
         let timeLeft = 60; // 60 วินาที
         let timerInterval;
         let correctBoxIndex = -1;
+
+        // ระบบลูกโป่งกวนประสาท (Troll Balloon)
+        let specialActive = false;
+        let specialHoverProgress = 0;
+        const specialBalloonEl = document.getElementById('balloon-special');
+        const specialBalloonBody = specialBalloonEl.querySelector('.balloon');
 
         let hoverTargetIndex = -1;
         let hoverProgress = 0;
@@ -531,11 +588,53 @@
             hoverTargetIndex = -1;
         }
 
+        // --- ระบบปล่อยลูกโป่งพิเศษสุดกวน (ทุก 15 วินาที) ---
+        function spawnSpecialBalloon() {
+            if (specialActive) return;
+            specialActive = true;
+            specialHoverProgress = 0;
+
+            // สุ่มตำแหน่งแกน X ของจอหลีกเลี่ยงการทับซ้อนตรงๆ (สุ่มในช่วง 15% ถึง 85% ของจอ)
+            const randomX = 15 + Math.random() * 70;
+            specialBalloonEl.style.left = `${randomX}%`;
+            specialBalloonEl.style.display = 'flex';
+
+            // เริ่มต้นจมอยู่ขอบล่างจอ ก่อนลอยชี้ขึ้นมา
+            specialBalloonEl.style.bottom = '-200px';
+
+            setTimeout(() => {
+                specialBalloonEl.style.bottom = '8%'; // ลอยมาค้างกลางอากาศแบบคงที่ (ปรับจาก 18% เป็น 8% เพื่อไม่ให้ลอยสูงเกินไป)
+            }, 50);
+
+            // สุ่มเปลี่ยนอีโมจิสร้างความกวนทุกครั้งที่ปล่อย
+            const trollEmojis = ["🤪", "🎰", "💀", "🎁", "😈", "🍀"];
+            document.getElementById('text-special').innerText = trollEmojis[Math.floor(Math.random() * trollEmojis.length)];
+        }
+
+        function resetSpecialBalloon() {
+            specialActive = false;
+            specialHoverProgress = 0;
+            specialBalloonEl.style.display = 'none';
+        }
+
         function triggerFlash(type) {
             const flash = document.getElementById('flash-overlay');
             flash.className = type === 'correct' ? 'flash-green' : 'flash-red';
             flash.style.opacity = '1';
             setTimeout(() => { flash.style.opacity = '0'; }, 300);
+        }
+
+        // เอฟเฟกต์แสดงกล่องข้อความลอย
+        function showSpecialFloatingText(text, x, y, isPositive) {
+            const container = document.getElementById('floating-text-layer');
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = text;
+            el.style.color = isPositive ? '#34d399' : '#f87171'; // สีเขียวหรือแดงแกง
+            el.style.left = `${x - 100}px`; // จัดสมดุลให้อยู่กลางจอคร่าวๆ
+            el.style.top = `${y}px`;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
         }
 
         function showFloatingTime(amount) {
@@ -589,17 +688,84 @@
                 ], { duration: 300 });
 
                 timeLeft -= 10;
-                score -= 2; // หักคะแนน 2 คะแนน (สามารถติดลบต่ำกว่า 0 ได้แล้ว)
+                score -= 2; // คะแนนลดติดลบได้ตามปกติ
                 document.getElementById('score-display').innerText = score;
                 
                 triggerFlash('wrong');
                 showFloatingTime(-10);
-                showFloatingScore(-2); // แสดงผลตัวเลขลอยเตือนใจ -2
+                showFloatingScore(-2); // แสดงข้อความลบ -2 คะแนนลอยเตือนใจ
                 
                 hoverProgress = 0;
                 hoverTargetIndex = -1;
                 updateTimerDisplay();
             }
+        }
+
+        // --- จัดการเวลาแตกของลูกโป่งพิเศษสุดกวน ---
+        function handleSpecialAnswer() {
+            if (!specialActive) return;
+
+            // สุ่ม 4 สถานะป่วน:
+            // 0: บวกคะแนนสุ่ม (1-4)
+            // 1: ลบคะแนนสุ่ม (1-4)
+            // 2: บวกเวลาสุ่ม (5-10)
+            // 3: ลบเวลาสุ่ม (5-10)
+            const effectType = Math.floor(Math.random() * 4);
+            let message = "";
+            let isPositive = true;
+
+            if (effectType === 0) {
+                // บวกคะแนนสุ่ม 1-4 คะแนน
+                const pts = Math.floor(Math.random() * 4) + 1;
+                score += pts;
+                message = `โชคดี! +${pts} คะแนน`;
+                isPositive = true;
+                playSpecialLuckySound();
+                showFloatingScore(pts);
+            } else if (effectType === 1) {
+                // ลบคะแนนสุ่ม 1-4 คะแนน
+                const pts = Math.floor(Math.random() * 4) + 1;
+                score -= pts; // คะแนนติดลบได้อย่างอิสระ
+                message = `โดนแกง! -${pts} คะแนน`;
+                isPositive = false;
+                playSpecialUnluckySound();
+                showFloatingScore(-pts);
+            } else if (effectType === 2) {
+                // บวกเวลาสุ่ม 5-10 วินาที
+                const sec = Math.floor(Math.random() * 6) + 5;
+                timeLeft += sec;
+                message = `เฮงมาก! +${sec} วินาที`;
+                isPositive = true;
+                playSpecialLuckySound();
+                showFloatingTime(sec);
+            } else {
+                // ลบเวลาสุ่ม 5-10 วินาที
+                const sec = Math.floor(Math.random() * 6) + 5;
+                timeLeft -= sec;
+                message = `โดนแกล้ง! -${sec} วินาที`;
+                isPositive = false;
+                playSpecialUnluckySound();
+                showFloatingTime(-sec);
+            }
+
+            // อัปเดตการแสดงผลและเตือนใจ
+            document.getElementById('score-display').innerText = score;
+            updateTimerDisplay();
+            triggerFlash(isPositive ? 'correct' : 'wrong');
+
+            // วาดตำแหน่งตัวหนังสือแจ้งโชคตรงตำแหน่งเป้าหมาย
+            const rect = specialBalloonBody.getBoundingClientRect();
+            showSpecialFloatingText(message, rect.left + rect.width / 2, rect.top, isPositive);
+
+            // เอฟเฟกต์การระเบิดแตกขยายตัวของลูกโป่งพิเศษ
+            specialBalloonBody.style.transform = 'scale(1.5)';
+            specialBalloonBody.style.opacity = '0';
+
+            setTimeout(() => {
+                specialBalloonBody.style.transform = '';
+                specialBalloonBody.style.opacity = '1';
+                resetSpecialBalloon();
+            }, 300);
         }
 
         function updateTimerDisplay() {
@@ -619,6 +785,7 @@
             score = 0;
             timeLeft = 60; // เริ่ม 60 วิ
             isPlaying = true;
+            resetSpecialBalloon();
             
             document.getElementById('score-display').innerText = score;
             updateTimerDisplay();
@@ -628,6 +795,11 @@
             timerInterval = setInterval(() => {
                 timeLeft--;
                 updateTimerDisplay();
+
+                // ทุกๆ 15 วินาที สุ่มปล่อยลูกโป่งพิเศษสุดกวน
+                if (timeLeft > 0 && timeLeft % 15 === 0) {
+                    spawnSpecialBalloon();
+                }
                 
                 if (timeLeft <= 0) {
                     endGame();
@@ -639,6 +811,7 @@
             isPlaying = false;
             clearInterval(timerInterval);
             stopBgMusic(); // ปิดเสียงเพลงเบส
+            resetSpecialBalloon();
             document.getElementById('game-ui').style.display = 'none';
             document.getElementById('game-over-screen').style.display = 'flex';
             document.getElementById('final-score').innerText = score;
@@ -677,6 +850,7 @@
         hands.onResults((results) => {
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             let currentHoverIndex = -1;
+            let isHoveringSpecial = false;
 
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
@@ -706,6 +880,7 @@
                 canvasCtx.stroke();
 
                 if (isPlaying) {
+                    // 1. เช็คเป้าปะทะกับลูกโป่ง 3 ลูกทั่วไป
                     for (let i = 0; i < 3; i++) {
                         const rect = balloonBalloons[i].getBoundingClientRect();
                         if (isPointInCircle(px, py, rect)) {
@@ -716,11 +891,22 @@
                         }
                     }
 
+                    // 2. เช็คเป้าปะทะกับลูกโป่งพิเศษสุดกวน
+                    if (specialActive) {
+                        const specialRect = specialBalloonBody.getBoundingClientRect();
+                        if (isPointInCircle(px, py, specialRect)) {
+                            isHoveringSpecial = true;
+                            specialBalloonEl.classList.add('hovered');
+                        } else {
+                            specialBalloonEl.classList.remove('hovered');
+                        }
+                    }
+
+                    // จัดการแสดงผลวงแหวนดาวน์โหลดค้างแช่
                     if (currentHoverIndex !== -1) {
                         if (hoverTargetIndex === currentHoverIndex) {
                             hoverProgress += hoverSpeed;
                             
-                            // วาดวงแหวนกำลังประมวลผลคำตอบ (Loading Ring)
                             canvasCtx.beginPath();
                             canvasCtx.arc(px, py, 25, -Math.PI / 2, (-Math.PI / 2) + ((hoverProgress / 100) * 2 * Math.PI));
                             canvasCtx.lineWidth = 6;
@@ -735,14 +921,34 @@
                             hoverTargetIndex = currentHoverIndex;
                             hoverProgress = 0;
                         }
+                    } else if (isHoveringSpecial) {
+                        if (hoverTargetIndex === 99) { // 99 เป็นเลขแทนลูกโป่งพิเศษสุดกวน
+                            specialHoverProgress += hoverSpeed;
+                            
+                            canvasCtx.beginPath();
+                            canvasCtx.arc(px, py, 25, -Math.PI / 2, (-Math.PI / 2) + ((specialHoverProgress / 100) * 2 * Math.PI));
+                            canvasCtx.lineWidth = 6;
+                            canvasCtx.strokeStyle = '#a855f7'; // วงแหวนสีม่วงวิเศษ
+                            canvasCtx.stroke();
+
+                            if (specialHoverProgress >= 100) {
+                                handleSpecialAnswer();
+                                specialHoverProgress = 0;
+                            }
+                        } else {
+                            hoverTargetIndex = 99;
+                            specialHoverProgress = 0;
+                        }
                     }
                 }
             }
 
-            if (currentHoverIndex === -1 && isPlaying) {
+            if (currentHoverIndex === -1 && !isHoveringSpecial && isPlaying) {
                 hoverTargetIndex = -1;
                 hoverProgress = 0;
+                specialHoverProgress = 0;
                 balloonWrappers.forEach(b => b.classList.remove('hovered'));
+                specialBalloonEl.classList.remove('hovered');
             }
         });
 
